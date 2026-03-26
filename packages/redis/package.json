@@ -1,0 +1,34 @@
+{
+  "name": "@repo/redis",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+ "exports": {
+  "./queue": "./src/queue.ts",
+  "./pubsub": "./src/pubsub.ts",
+  "./index": "./src/index.ts"
+},
+  "typesVersions": {
+    "*": {
+      "queue": ["./dist/queue.ts"],
+      "pubsub": ["./dist/pubsub.ts"],
+      "index": ["./dist/index.ts"]
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@repo/typescript-config": "workspace:*"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.2",
+    "redis": "^5.8.2"
+  }
+}
