@@ -2,22 +2,23 @@
   "name": "@repo/types",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "dist/index.js",
   "exports": {
-    "./types": "./src/index.ts",
-    "./zodSchema": "./src/zodSchema.ts"
+    "./types": "./dist/index.js",
+    "./zodSchema": "./dist/zodSchema.js"
   },
-   "typesVersions": {
+  "typesVersions": {
     "*": {
-      "types": ["./src/index.ts"],
-      "zodSchema": ["./src/zodSchema.ts"]
+      "types": ["./dist/index.d.ts"],
+      "zodSchema": ["./dist/zodSchema.d.ts"]
     }
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\\\" && exit 1"
+    "build": "tsc"
   },
   "devDependencies": {
-    "@repo/typescript-config": "workspace:*"
+    "@repo/typescript-config": "workspace:*",
+    "typescript": "^5"
   },
   "keywords": [],
   "author": "",

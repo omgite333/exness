@@ -2,9 +2,7 @@
   "name": "@repo/db",
   "version": "0.0.1",
   "private": true,
-  "exports": {
-    "./client": "./src/db/client.ts"
-  },
+ 
   "main": "src/index.ts",
   "scripts": {
     "build": "tsc",
@@ -24,9 +22,12 @@
     "drizzle-orm": "^0.45.1",
     "pg": "^8.20.0"
   },
-  "typesVersions": {
+"exports": {
+  "./client": "./dist/db/client.js"
+},
+"typesVersions": {
   "*": {
-    "client": ["./src/db/client.ts"]
+    "client": ["./dist/db/client.d.ts"]
   }
 }
 }

@@ -5,18 +5,18 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
- "exports": {
-  "./queue": "./src/queue.ts",
-  "./pubsub": "./src/pubsub.ts",
-  "./index": "./src/index.ts"
+"exports": {
+  "./queue": "./dist/queue.js",
+  "./pubsub": "./dist/pubsub.js",
+  "./index": "./dist/index.js"
 },
-  "typesVersions": {
-    "*": {
-      "queue": ["./dist/queue.ts"],
-      "pubsub": ["./dist/pubsub.ts"],
-      "index": ["./dist/index.ts"]
-    }
-  },
+"typesVersions": {
+  "*": {
+    "queue": ["./dist/queue.d.ts"],
+    "pubsub": ["./dist/pubsub.d.ts"],
+    "index": ["./dist/index.d.ts"]
+  }
+},
   "scripts": {
     "build": "tsc",
     "type-check": "tsc --noEmit"
