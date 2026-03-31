@@ -1,159 +1,349 @@
-# Turborepo starter
+# Exness — Perpetuals Trading Platform
 
-This Turborepo starter is maintained by the Turborepo core team.
+A full-stack, real-time perpetual futures trading platform built as a **Turborepo monorepo**. Users can trade BTC, ETH, and SOL perpetual contracts with leverage, against live price feeds from Binance Futures. The system supports both authenticated users (magic-link email) and unauthenticated guests.
 
-## Using this example
 
-Run the following command:
+<img width="1919" height="895" alt="image" src="https://github.com/user-attachments/assets/afcf452a-10c3-48dc-a30c-5baba404e3e8" />
 
-```sh
-npx create-turbo@latest
+---
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Client (React)                      │
+│   Vite · React 19 · TanStack Query · Lightweight Charts  │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP / REST
+┌──────────────────────▼──────────────────────────────────┐
+│                   Backend (Express 5)                    │
+│   Auth · Trade · Balance · Response-Loop Worker         │
+└───────────┬──────────────────────────┬──────────────────┘
+            │ Redis Streams (push)      │ Redis Streams (pull)
+┌───────────▼──────────────────────────▼──────────────────┐
+│                  Engine (Bun / Node)                     │
+│   Order book · Margin engine · Liquidation logic        │
+│   MongoDB (candles/history) · PostgreSQL (state)        │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## What's inside?
+Three long-running services communicate exclusively through **Redis Streams**, keeping them fully decoupled:
 
-This Turborepo includes the following packages/apps:
+| Service | Role |
+|---------|------|
+| `apps/frontend` | React SPA — charts, order form, open positions |
+| `apps/backend` | REST API — auth, trade routing, balance queries |
+| `apps/engine` | Matching engine — order execution, PnL, liquidation |
 
-### Apps and Packages
+Shared code lives under `packages/`:
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
+| Package | Contents |
+|---------|----------|
+| `@repo/db` | Drizzle ORM client + PostgreSQL schema |
+| `@repo/redis` | Redis client, pub/sub helpers, stream queue wrappers |
+| `@repo/types` | Shared TypeScript types and Zod schemas |
+| `@repo/eslint-config` | Shared ESLint rules |
+| `@repo/typescript-config` | Shared `tsconfig.json` bases |
 
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
+---
 
-### Utilities
+## Supported Assets
 
-This Turborepo has some additional tools already setup for you:
+| Symbol | Name |
+|--------|------|
+| `BTC_USDC_PERP` | Bitcoin |
+| `ETH_USDC_PERP` | Ethereum |
+| `SOL_USDC_PERP` | Solana |
 
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
+---
 
-### Build
+## Prerequisites
 
-To build all apps and packages, run the following command:
+| Tool | Version |
+|------|---------|
+| [Node.js](https://nodejs.org/) | ≥ 20 |
+| [pnpm](https://pnpm.io/) | ≥ 9 |
+| [Bun](https://bun.sh/) | ≥ 1.0 (used by backend & engine in dev) |
+| [Redis](https://redis.io/) | ≥ 7 (local or Docker) |
+| PostgreSQL | ≥ 15 (or [Neon](https://neon.tech) serverless) |
+| MongoDB | ≥ 7 (local or Atlas) |
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+---
 
-```sh
-cd my-turborepo
-turbo build
+## Getting Started
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/your-username/exness.git
+cd exness
+pnpm install
 ```
 
-Without global `turbo`, use your package manager:
+### 2. Set up environment variables
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+Each app requires its own `.env` file. Copy the examples below into the appropriate directories.
+
+#### `apps/backend/.env`
+
+```env
+DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
+REDIS_URL=redis://localhost:6379
+JWT_SECRET=your-super-secret-jwt-key
+CORS_ORIGIN=http://localhost:5173
+HTTP_PORT=3001
+API_BASE_URL=http://localhost:3001/api/v1
+RESEND_API=re_your_resend_api_key        # https://resend.com
+NODE_ENV=development
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+#### `apps/engine/.env`
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```env
+MONGODB_URL=mongodb://localhost:27017/Exness
+REDIS_URL=redis://localhost:6379
+DATABASE_URL=postgresql://<user>:<password>@<host>/<db>?sslmode=require
 ```
 
-Without global `turbo`:
+#### `apps/frontend/.env`
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```env
+VITE_API_BASE_URL=/api/v1
+VITE_WS_URL=ws://localhost:8080
+VITE_BINANCE_KLINES_API_URL=https://fapi.binance.com/fapi/v1/klines
 ```
 
-### Develop
+### 3. Push the database schema
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+cd packages/db
+pnpm db:push
 ```
 
-Without global `turbo`, use your package manager:
+### 4. Start all services in development
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+From the repo root:
+
+```bash
+pnpm dev
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+This runs `turbo dev` which starts all three apps in parallel with hot-reload.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+To start a single service:
 
-```sh
-turbo dev --filter=web
+```bash
+pnpm --filter backend dev
+pnpm --filter frontend dev
+pnpm --filter engine dev
 ```
 
-Without global `turbo`:
+---
 
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+## Environment Variables Reference
+
+### Backend
+
+| Variable | Description |
+|----------|-------------|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `REDIS_URL` | Redis connection URL |
+| `JWT_SECRET` | Secret used to sign magic-link JWTs |
+| `CORS_ORIGIN` | Allowed origin for CORS (frontend URL) |
+| `HTTP_PORT` | Port for the Express server (default `3001`) |
+| `API_BASE_URL` | Base URL used in email magic links |
+| `RESEND_API` | API key for [Resend](https://resend.com) email delivery |
+| `NODE_ENV` | `development` or `production` |
+
+### Engine
+
+| Variable | Description |
+|----------|-------------|
+| `MONGODB_URL` | MongoDB connection string (trade history / candles) |
+| `REDIS_URL` | Redis connection URL |
+| `DATABASE_URL` | PostgreSQL connection string (live user/balance state) |
+
+### Frontend
+
+| Variable | Description |
+|----------|-------------|
+| `VITE_API_BASE_URL` | Backend API prefix (proxied via Vite in dev) |
+| `VITE_WS_URL` | WebSocket URL for real-time price feed |
+| `VITE_BINANCE_KLINES_API_URL` | Binance Futures klines endpoint for candlestick data |
+
+---
+
+## API Reference
+
+All routes are prefixed with `/api/v1`.
+
+### Auth
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/auth/email` | Send magic-link sign-in email |
+| `GET` | `/auth/signin?token=<jwt>` | Verify magic link and set session cookie |
+| `GET` | `/auth/whoami` | Return current user identity |
+| `POST` | `/auth/guest` | Create a 24-hour guest session |
+| `POST` | `/auth/logout` | Clear session cookie |
+
+### Trade
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/trade/open` | Open a new leveraged position |
+| `POST` | `/trade/close` | Close an existing position |
+| `GET` | `/trade/open` | Fetch all open orders for current user |
+
+### Balance
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/balance` | Get current USDC balance |
+
+### Assets
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/supportedAssets` | List all tradeable perpetual pairs |
+
+---
+
+## Authentication
+
+Authentication uses **magic links** delivered via [Resend](https://resend.com):
+
+1. User submits their email via `POST /api/v1/auth/email`.
+2. The backend creates or retrieves the user in PostgreSQL, signs a JWT containing the user's UUID, and emails the link.
+3. Clicking the link hits `GET /api/v1/auth/signin?token=<jwt>`, which sets an `httpOnly` cookie and redirects to `/trade`.
+
+Guest sessions are also supported — a guest UUID is generated server-side, wrapped in a JWT, and stored in a short-lived cookie. Guests start with a virtual balance of **$5,000,000 (4 decimal places)** and can trade immediately without an account.
+
+---
+
+## Database Schema
+
+### `users`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` PK | Auto-generated |
+| `email` | `varchar(255)` | Unique |
+| `balance` | `integer` | Fixed-point (4 decimals) |
+| `decimal` | `integer` | Precision (always `4`) |
+| `last_logged_in` | `timestamp` | Nullable |
+
+### `existing_trades`
+
+| Column | Type | Notes |
+|--------|------|-------|
+| `id` | `uuid` PK | Auto-generated |
+| `open_price` | `integer` | Fixed-point |
+| `leverage` | `integer` | |
+| `asset` | `varchar(255)` | Symbol e.g. `BTC_USDC_PERP` |
+| `margin` | `integer` | Fixed-point |
+| `quantity` | `float8` | |
+| `type` | `order_type` enum | `long` \| `short` |
+| `close_price` | `integer` | |
+| `pnl` | `integer` | Fixed-point |
+| `liquidated` | `boolean` | |
+| `user_id` | `uuid` FK | References `users.id` |
+| `created_at` | `timestamp` | |
+
+Index: `(user_id, created_at)` for efficient trade history queries.
+
+---
+
+## Build
+
+Build all packages and apps:
+
+```bash
+pnpm build
 ```
 
-### Remote Caching
+Build a specific app:
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
-
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
-
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo login
+```bash
+pnpm --filter backend build
+pnpm --filter frontend build
+pnpm --filter engine build
 ```
 
-Without global `turbo`, use your package manager:
+---
 
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+## Tech Stack
+
+### Frontend
+- **React 19** + **TypeScript**
+- **Vite 7** (bundler)
+- **TanStack Query v5** (server state)
+- **Zustand** (client state)
+- **Lightweight Charts** (TradingView candlestick charts)
+- **Tailwind CSS v4**
+- **React Router v7**
+
+### Backend
+- **Express 5** + **TypeScript**
+- **Bun** (dev runtime)
+- **Drizzle ORM** (PostgreSQL)
+- **jsonwebtoken** (magic-link auth)
+- **Resend** (transactional email)
+- **express-rate-limit** (guest rate limiting)
+
+### Engine
+- **Bun** (dev runtime) / **Node.js** (production)
+- **MongoDB** (trade history, candles)
+- **Drizzle ORM** (PostgreSQL — live user state)
+- **Zod** (input validation)
+
+### Infrastructure
+- **Redis Streams** — async communication between backend and engine
+- **PostgreSQL** (via [Neon](https://neon.tech)) — persistent user/trade state
+- **MongoDB** — time-series trade data
+- **Turborepo** — monorepo task orchestration and caching
+
+---
+
+## Project Structure
+
+```
+exness/
+├── apps/
+│   ├── backend/          # Express REST API
+│   │   └── src/
+│   │       ├── controller/   # authController, tradeController, balanceController
+│   │       ├── middleware/   # auth, guest session, error handler, rate limiter
+│   │       ├── router/       # Express route definitions
+│   │       └── utils/        # Response loop, email, trade error messages
+│   ├── engine/           # Matching & margin engine
+│   │   └── src/
+│   │       ├── engineClass.ts  # Core engine logic
+│   │       ├── dbClient.ts     # MongoDB client
+│   │       └── utils.ts
+│   └── frontend/         # React SPA
+│       └── src/
+│           ├── components/   # CandlesChart, TradeForm, OpenOrders, QuotesTable
+│           └── lib/          # API helpers, balance utilities
+├── packages/
+│   ├── db/               # Drizzle schema + PostgreSQL client
+│   ├── redis/            # Redis client, pub/sub, stream queues
+│   ├── types/            # Shared TS types + Zod schemas
+│   ├── eslint-config/    # Shared ESLint config
+│   ├── typescript-config/ # Shared tsconfig bases
+│   └── ui/               # Shared React component stubs
+├── turbo.json
+├── pnpm-workspace.yaml
+└── package.json
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+---
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## Contributing
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+1. Fork the repository and create a feature branch.
+2. Run `pnpm install` and ensure all type checks pass: `pnpm --filter '*' type-check`.
+3. Follow the existing code style (ESLint + Prettier are configured).
+4. Open a pull request with a clear description of the change.
 
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+---
