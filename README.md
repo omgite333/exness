@@ -2,8 +2,55 @@
 
 A full-stack, real-time perpetual futures trading platform built as a **Turborepo monorepo**. Users can trade BTC, ETH, and SOL perpetual contracts with leverage, against live price feeds from Binance Futures. The system supports both authenticated users (magic-link email) and unauthenticated guests.
 
+---
 
-<img width="1919" height="895" alt="image" src="https://github.com/user-attachments/assets/afcf452a-10c3-48dc-a30c-5baba404e3e8" />
+## Quick Start
+
+> Make sure you have **Node.js ≥ 20**, **pnpm ≥ 9**, **Bun ≥ 1.0**, **Redis**, **PostgreSQL**, and **MongoDB** running before proceeding. See [Prerequisites](#prerequisites) for details.
+
+**1. Clone the repository**
+
+```bash
+git clone https://github.com/your-username/exness.git
+cd exness
+```
+
+**2. Install dependencies**
+
+```bash
+pnpm install
+```
+
+**3. Set up environment variables**
+
+Create `.env` files for each app (see [Getting Started](#getting-started) for the full variable list):
+
+```bash
+cp apps/backend/.env.example   apps/backend/.env
+cp apps/engine/.env.example    apps/engine/.env
+cp apps/frontend/.env.example  apps/frontend/.env
+```
+
+Then fill in your database URLs, Redis URL, JWT secret, and Resend API key.
+
+**4. Push the database schema**
+
+```bash
+cd packages/db && pnpm db:push && cd ../..
+```
+
+**5. Run all services**
+
+```bash
+pnpm dev
+```
+
+That's it — the frontend will be at **http://localhost:5173** and the backend API at **http://localhost:3001**.
+
+| Service | URL |
+|---------|-----|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:3001/api/v1 |
 
 ---
 
@@ -336,14 +383,5 @@ exness/
 ├── pnpm-workspace.yaml
 └── package.json
 ```
-
----
-
-## Contributing
-
-1. Fork the repository and create a feature branch.
-2. Run `pnpm install` and ensure all type checks pass: `pnpm --filter '*' type-check`.
-3. Follow the existing code style (ESLint + Prettier are configured).
-4. Open a pull request with a clear description of the change.
 
 ---
