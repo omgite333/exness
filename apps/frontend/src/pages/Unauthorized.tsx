@@ -1,61 +1,51 @@
 import { Link } from "react-router-dom";
+import { ShieldOff, LogIn, Home } from "lucide-react";
 
 export default function Unauthorized() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020617] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-[#080c14] text-white flex flex-col items-center justify-center px-6 relative overflow-hidden">
 
-      {/* GRID BACKGROUND */}
-      <div className="absolute inset-0 opacity-[0.05] bg-[linear-gradient(to_right,#fff1_1px,transparent_1px),linear-gradient(to_bottom,#fff1_1px,transparent_1px)] bg-[size:40px_40px]" />
+      {/* Subtle grid */}
+      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:64px_64px]" />
 
-      {/* GLOW */}
-      <div className="absolute inset-0 bg-gradient-to-br from-red-500/20 via-transparent to-blue-500/20 blur-3xl" />
+      {/* Glow - red tint for auth error */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[250px] bg-red-500/6 rounded-full blur-3xl" />
 
-      {/* CONTENT */}
-      <div className="relative z-10 text-center px-6 max-w-md">
+      <div className="relative z-10 text-center max-w-sm">
 
-        {/* LOGO */}
-        <div className="flex justify-center mb-6">
-          <img src="/exness-logo.png" className="h-6 opacity-80" />
+        {/* Logo */}
+        <div className="flex justify-center mb-10">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-sm font-bold">EX</div>
         </div>
 
-        {/* CODE */}
-        <h1 className="text-6xl font-bold mb-4">
-          401
-        </h1>
+        {/* Icon */}
+        <div className="flex justify-center mb-6">
+          <div className="w-16 h-16 rounded-2xl bg-red-500/10 border border-red-500/15 flex items-center justify-center">
+            <ShieldOff className="text-red-400" size={28} />
+          </div>
+        </div>
 
-        {/* TITLE */}
-        <h2 className="text-2xl font-semibold mb-3">
-          Unauthorized Access
-        </h2>
-
-        {/* DESCRIPTION */}
-        <p className="text-gray-400 mb-8">
-          You don’t have permission to access this page.
+        <h2 className="text-xl font-semibold mb-2">Access Denied</h2>
+        <p className="text-gray-500 text-sm mb-8 leading-relaxed">
+          You don't have permission to view this page. Please sign in with an authorized account.
         </p>
 
-        {/* ACTIONS */}
-        <div className="flex justify-center gap-4">
-
+        <div className="flex justify-center gap-3">
           <Link
             to="/login"
-            className="px-6 py-3 rounded-lg bg-gradient-to-r from-blue-600 to-cyan-500 font-medium shadow-lg shadow-blue-500/30 hover:scale-105 transition"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white text-[#080c14] font-semibold text-sm hover:bg-gray-100 transition-all"
           >
-            Go to Login
+            <LogIn size={14} /> Sign In
           </Link>
-
           <Link
             to="/"
-            className="px-6 py-3 rounded-lg border border-white/20 hover:bg-white/5 transition"
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-white/10 text-sm text-gray-300 hover:bg-white/5 hover:text-white transition-all"
           >
-            Home
+            <Home size={14} /> Home
           </Link>
-
         </div>
 
-        {/* EXTRA */}
-        <p className="mt-10 text-xs text-gray-500">
-          Error Code: 401_UNAUTHORIZED
-        </p>
+        <p className="mt-10 text-[10px] text-gray-700 font-mono">ERROR_CODE: 401_UNAUTHORIZED</p>
       </div>
     </div>
   );
